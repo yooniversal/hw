@@ -30,60 +30,72 @@ def drowse_dest_path():
     txt_dest_path.insert(0, folder_selected)
 
 def merge_image():
-    # 가로 넓이
-    img_width = cmb_width.get()
-    if img_width == "원본유지":
-        img_width = -1 # default
-    else:
-        img_width = int(img_width)
 
-    # 간격
-    img_space = cmb_space.get()
-    if img_space == "좁게":
-        img_space = 30
-    elif img_space == "보통":
-        img_space = 60
-    elif img_space == "넓게":
-        img_space = 90
-    else:
-        img_space = 0
+    try:
+        # 가로 넓이
+        img_width = cmb_width.get()
+        if img_width == "원본유지":
+            img_width = -1 # default
+        else:
+            img_width = int(img_width)
 
-    # 포맷
-    img_format = cmb_format.get().lower()
+        # 간격
+        img_space = cmb_space.get()
+        if img_space == "좁게":
+            img_space = 30
+        elif img_space == "보통":
+            img_space = 60
+        elif img_space == "넓게":
+            img_space = 90
+        else:
+            img_space = 0
 
-    #######################################################
+        # 포맷
+        img_format = cmb_format.get().lower()
 
-    images = [Image.open(x) for x in list_file.get(0, END)]
+        #######################################################
 
-    # 이미지 사이즈 리스트에 넣어서 하나씩 처리
-    image_sizes = [] # [(width1, height1), (width2, height2), ...]
-    if img_width > -1:
-        # width 값 변경
-        image_sizes = [(int(img_width), int(img_width*x.size[1]/x.size[0])) for x in images]
-    else:
-        # 원본 유지
-        image_sizes = [(x.size[0], x.size[1]) for x in images]
+        images = [Image.open(x) for x in list_file.get(0, END)]
 
-    widths, heights = zip(*(image_sizes))
+        # 이미지 사이즈 리스트에 넣어서 하나씩 처리
+        image_sizes = [] # [(width1, height1), (width2, height2), ...]
+        if img_width > -1:
+            # width 값 변경
+            image_sizes = [(int(img_width), int(img_width*x.size[1]/x.size[0])) for x in images]
+        else:
+            # 원본 유지
+            image_sizes = [(x.size[0], x.size[1]) for x in images]
 
-    # 최대 너비, 전체 높이를 구함
-    max_width, total_height = max(widths), sum(heights)
+        widths, heights = zip(*(image_sizes))
 
-    # 스케치북 준비
-    result_img = Image.new("RGB", (max_width, total_height), (255, 255, 255))
-    y_offset = 0 # y 위치
+        # 최대 너비, 전체 높이를 구함
+        max_width, total_height = max(widths), sum(heights)
 
-    for idx, img in enumerate(images):
-        result_img.paste(img, (0, y_offset))
-        y_offset += img.size[1]
+        # 스케치북 준비
+        if img_space > 0: # 이미지 간격 옵션 적용
+            total_height += (img_space * (len(images)-1))
+        result_img = Image.new("RGB", (max_width, total_height), (255, 255, 255))
+        y_offset = 0 # y 위치
 
-        progress = (idx+1)/ len(images) * 100 # 실제 퍼센트 정보 계산
-        p_var.set(progress)
-        progress_bar.update()
+        for idx, img in enumerate(images):
+            # width가 원본이 아니면 이미지 크기 조정
+            if img_width > -1:
+                img = img.resize(image_sizes[idx])
 
-    dest_path = os.path.join(txt_dest_path.get(), "yoon_photo.jpg")
-    result_img.save(dest_path)
-    msgbox.showinfo("알림", "작업이 완료되었습니다")
+            result_img.paste(img, (0, y_offset))
+            y_offset += (img.size[1] + img_space) # height값 + 사용자가 지정한 간격
+
+            progress = (idx+1)/ len(images) * 100 # 실제 퍼센트 정보 계산
+            p_var.set(progress)
+            progress_bar.update()
+
+        # 포맷 옵션 처리
+        file_name = "yoon_photo." + img_format
+        dest_path = os.path.join(txt_dest_path.get(), file_name)
+        result_img.save(dest_path)
+        msgbox.showinfo("알림", "작업이 완료되었습니다")
+    except Exception as err: # 예외 처리
+        msgbox.showerr("에러", err)
 
 # 시작
 def start():
